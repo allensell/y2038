@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Y2038 Countdown</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Courier New', monospace;
+      background: #0a0a0f;
+      color: #c0c8ff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 10px;
+    }
+
+    h1 {
+      font-size: 0.75rem;
+      letter-spacing: 0.12em;
+      color: #8090ff;
+      margin-bottom: 2px;
+      text-transform: uppercase;
+    }
+
+    .subtitle {
+      font-size: 0.6rem;
+      color: #505880;
+      margin-bottom: 12px;
+      letter-spacing: 0.05em;
+    }
+
+    .countdown {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 12px;
+    }
+
+    .unit {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #0f1020;
+      border: 1px solid #2a2d50;
+      border-radius: 6px;
+      padding: 6px 8px;
+      min-width: 42px;
+    }
+
+    .unit .value {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #a0b0ff;
+      line-height: 1;
+      letter-spacing: 0.04em;
+      transition: color 0.3s;
+    }
+
+    .unit .label {
+      font-size: 0.5rem;
+      color: #505880;
+      margin-top: 4px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .overflow-info {
+      background: #0f1020;
+      border: 1px solid #2a2d50;
+      border-radius: 6px;
+      padding: 8px 12px;
+      text-align: center;
+      margin-bottom: 10px;
+      max-width: 320px;
+    }
+
+    .overflow-info .target-date {
+      font-size: 0.65rem;
+      color: #8090ff;
+      margin-bottom: 4px;
+      letter-spacing: 0.06em;
+    }
+
+    .overflow-info .overflow-value {
+      font-size: 0.55rem;
+      color: #404870;
+      line-height: 1.6;
+    }
+
+    .overflow-info .overflow-value code {
+      color: #6070c0;
+      background: #181828;
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+
+    .progress-wrap {
+      width: 100%;
+      max-width: 320px;
+      margin-bottom: 8px;
+    }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.5rem;
+      color: #404870;
+      margin-bottom: 4px;
+      letter-spacing: 0.04em;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 4px;
+      background: #0f1020;
+      border: 1px solid #2a2d50;
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #3040a0, #7080ff);
+      border-radius: 99px;
+      transition: width 1s linear;
+    }
+
+    .unix-now {
+      margin-top: 8px;
+      font-size: 0.55rem;
+      color: #404870;
+      letter-spacing: 0.05em;
+    }
+
+    .unix-now span {
+      color: #6070b0;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>32-Bit Clock Overflow</h1>
+  <p class="subtitle">The Unix Y2038 Problem</p>
+
+  <div class="countdown">
+    <div class="unit"><div class="value" id="years">--</div><div class="label">Years</div></div>
+    <div class="unit"><div class="value" id="days">--</div><div class="label">Days</div></div>
+    <div class="unit"><div class="value" id="hours">--</div><div class="label">Hours</div></div>
+    <div class="unit"><div class="value" id="minutes">--</div><div class="label">Minutes</div></div>
+    <div class="unit"><div class="value" id="seconds">--</div><div class="label">Seconds</div></div>
+  </div>
+
+  <div class="overflow-info">
+    <div class="target-date">2038-01-19 &nbsp;03:14:07 UTC</div>
+    <div class="overflow-value">
+      The 32-bit signed integer timestamp wraps from<br>
+      <code>2,147,483,647</code> → <code>−2,147,483,648</code><br>
+      rolling clocks back to <code>1901-12-13</code>
+    </div>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-label">
+      <span>Unix epoch &nbsp;1970-01-01</span>
+      <span>Overflow &nbsp;2038-01-19</span>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+  </div>
+
+  <div class="unix-now">Current Unix timestamp: <span id="unixNow">—</span></div>
+
+  <script>
+    // 32-bit signed max: 2^31 - 1 = 2147483647
+    // That's 2038-01-19T03:14:07Z
+    const OVERFLOW = new Date('2038-01-19T03:14:07Z').getTime();
+    const EPOCH    = new Date('1970-01-01T00:00:00Z').getTime();
+    const TOTAL_MS = OVERFLOW - EPOCH;
+
+    function pad(n, w = 2) { return String(n).padStart(w, '0'); }
+
+    function tick() {
+      const now = Date.now();
+      const diff = OVERFLOW - now;
+
+      if (diff <= 0) {
+        document.getElementById('years').textContent   = '00';
+        document.getElementById('days').textContent    = '000';
+        document.getElementById('hours').textContent   = '00';
+        document.getElementById('minutes').textContent = '00';
+        document.getElementById('seconds').textContent = '00';
+        document.querySelector('h1').textContent = '32-Bit Clock Has Overflowed';
+        return;
+      }
+
+      const totalSec = Math.floor(diff / 1000);
+      const secs     = totalSec % 60;
+      const totalMin = Math.floor(totalSec / 60);
+      const mins     = totalMin % 60;
+      const totalHr  = Math.floor(totalMin / 60);
+      const hrs      = totalHr % 24;
+      const totalDay = Math.floor(totalHr / 24);
+      const yrs      = Math.floor(totalDay / 365.25);
+      const remDays  = Math.floor(totalDay - yrs * 365.25);
+
+      document.getElementById('years').textContent   = pad(yrs);
+      document.getElementById('days').textContent    = pad(remDays, 3);
+      document.getElementById('hours').textContent   = pad(hrs);
+      document.getElementById('minutes').textContent = pad(mins);
+      document.getElementById('seconds').textContent = pad(secs);
+
+      const elapsed = now - EPOCH;
+      const pct = Math.min(100, (elapsed / TOTAL_MS) * 100).toFixed(4);
+      document.getElementById('progressFill').style.width = pct + '%';
+
+      document.getElementById('unixNow').textContent = Math.floor(now / 1000).toLocaleString();
+    }
+
+    tick();
+    setInterval(tick, 1000);
+  </script>
+</body>
+</html>
